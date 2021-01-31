@@ -151,6 +151,10 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
                 guard let videoUrl = videoUrl else {
                     return
                 }
+                AnimationManager.shared.videoFrame = controller.circeFrame
+                if AnimationManager.shared.shouldAnimateInsertion {
+                    controller.dismissImmediately()
+                }
                 
                 var finalDimensions: CGSize = dimensions
                 var finalDuration: Double = duration

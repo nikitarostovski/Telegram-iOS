@@ -466,7 +466,7 @@ class WebSearchControllerNode: ASDisplayNode {
         insets.bottom += toolbarHeight
         self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: insets, preloadSize: 400.0, type: gridNodeLayoutForContainerLayout(size: layout.size)), transition: .immediate), itemTransition: .immediate, stationaryItems: .none,updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
-        let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
+        let (_, duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         
         self.recentQueriesNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         self.recentQueriesNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })

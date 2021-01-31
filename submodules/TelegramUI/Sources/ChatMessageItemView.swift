@@ -143,7 +143,7 @@ enum ChatMessagePeekPreviewContent {
 private let voiceMessageDurationFormatter: DateComponentsFormatter = {
     let formatter = DateComponentsFormatter()
     formatter.unitsStyle = .spellOut
-    formatter.allowedUnits = [.second]
+    formatter.allowedUnits = [.minute, .second]
     formatter.zeroFormattingBehavior = .pad
     return formatter
 }()
@@ -151,7 +151,7 @@ private let voiceMessageDurationFormatter: DateComponentsFormatter = {
 private let musicDurationFormatter: DateComponentsFormatter = {
     let formatter = DateComponentsFormatter()
     formatter.unitsStyle = .spellOut
-    formatter.allowedUnits = [.minute, .second]
+    formatter.allowedUnits = [.hour, .minute, .second]
     formatter.zeroFormattingBehavior = .pad
     return formatter
 }()
@@ -519,6 +519,7 @@ final class ChatMessageAccessibilityData {
             
             result += "\n\(dateString)"
             if !isIncoming && item.read {
+                result += "\n"
                 if announceIncomingAuthors {
                     result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipients
                 } else {
@@ -647,8 +648,20 @@ public class ChatMessageItemView: ListViewItemNode {
     
     var item: ChatMessageItem?
     var accessibilityData: ChatMessageAccessibilityData?
+    var safeInsets = UIEdgeInsets()
     
     var awaitingAppliedReaction: (String?, () -> Void)?
+    
+    private var _insertionAnimationOverriden = true
+    
+    override public var insertionAnimationOverriden: Bool {
+        get {
+            return _insertionAnimationOverriden && AnimationManager.shared.shouldAnimateInsertion
+        }
+        set {
+            _insertionAnimationOverriden = newValue
+        }
+    }
     
     public required convenience init() {
         self.init(layerBacked: false)
@@ -696,6 +709,8 @@ public class ChatMessageItemView: ListViewItemNode {
     }
     
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+        super.animateInsertion(currentTimestamp, duration: duration, short: short)
+        
         if short {
             //self.layer.animateBoundsOriginYAdditive(from: -self.bounds.size.height, to: 0.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
         } else {
@@ -703,6 +718,7 @@ public class ChatMessageItemView: ListViewItemNode {
             self.addTransitionOffsetAnimation(0.0, duration: duration, beginAt: currentTimestamp)
         }
     }
+    
     
     func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
         return { _, _, _, _, _ in
@@ -813,7 +829,7 @@ public class ChatMessageItemView: ListViewItemNode {
                     item.controllerInteraction.openCheckoutOrReceipt(item.message.id)
                 case let .urlAuth(url, buttonId):
                     item.controllerInteraction.requestMessageActionUrlAuth(url, item.message.id, buttonId)
-                case let .setupPoll(isQuiz):
+                case .setupPoll:
                     break
             }
         }
@@ -831,6 +847,10 @@ public class ChatMessageItemView: ListViewItemNode {
     }
     
     func targetReactionNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+        return nil
+    }
+    
+    func getStatusNode() -> ASDisplayNode? {
         return nil
     }
 }

@@ -1023,23 +1023,31 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         if let updateSizeAndInsets = updateSizeAndInsets {
             if !updateSizeAndInsets.duration.isZero && !isExperimentalSnapToScrollToItem {
                 switch updateSizeAndInsets.curve {
-                    case let .Spring(duration):
-                        transition = .animated(duration: duration, curve: .spring)
-                    case let .Default(duration):
-                        transition = .animated(duration: max(updateSizeAndInsets.duration, duration ?? 0.3), curve: .easeInOut)
+                case let .Spring(duration):
+                    transition = .animated(duration: duration, curve: .spring)
+                case let .Default(duration):
+                    transition = .animated(duration: max(updateSizeAndInsets.duration, duration ?? 0.3), curve: .easeInOut)
+                case let .Custom(delay: delay, duration: duration, curve: curve):
+                    transition = .animated(delay: delay, duration: max(updateSizeAndInsets.duration, duration ?? 0.3), curve: .custom(curve.0, curve.1, curve.2, curve.3))
                 }
             }
         } else if let scrollToItem = scrollToItem {
             if scrollToItem.animated {
                 switch scrollToItem.curve {
-                    case let .Spring(duration):
-                        transition = .animated(duration: duration, curve: .spring)
-                    case let .Default(duration):
-                        if let duration = duration, duration.isZero {
-                            transition = .immediate
-                        } else {
-                            transition = .animated(duration: duration ?? 0.3, curve: .easeInOut)
-                        }
+                case let .Spring(duration):
+                    transition = .animated(duration: duration, curve: .spring)
+                case let .Default(duration):
+                    if let duration = duration, duration.isZero {
+                        transition = .immediate
+                    } else {
+                        transition = .animated(duration: duration ?? 0.3, curve: .easeInOut)
+                    }
+                case let .Custom(delay: delay, duration: duration, curve: curve):
+                    if let duration = duration, duration.isZero {
+                        transition = .immediate
+                    } else {
+                        transition = .animated(delay: delay, duration: duration ?? 0.3, curve: .custom(curve.0, curve.1, curve.2, curve.3))
+                    }
                 }
             }
         }
@@ -1625,6 +1633,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         
         var previousNodes: [Int: QueueLocalObject<ListViewItemNode>] = [:]
         for insertedItem in sortedIndicesAndItems {
+//            if insertedItem.forceAnimateInsertion { return }
             if insertedItem.index < 0 || insertedItem.index > self.items.count {
                 fatalError("insertedItem.index \(insertedItem.index) is out of bounds 0 ... \(self.items.count)")
             }
@@ -2384,6 +2393,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             switch operation {
                 case let .InsertNode(index, offsetDirection, nodeAnimated, nodeObject, layout, apply):
                     let node = nodeObject.syncWith({ $0 })!
+                    
                     var previousFrame: CGRect?
                     for (previousNode, frame) in previousApparentFrames {
                         if previousNode === node {
@@ -2440,6 +2450,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             if let extractedBackgroundsNode = node.extractedBackgroundNode {
                                 self.extractedBackgroundsContainerNode?.addSubnode(extractedBackgroundsNode)
                             }
+                        }
+                    }
+                    if node.insertionAnimationOverriden, let animation = node.insertionAnimation {
+                        node.isHidden = true
+                        animation {
+                            node.isHidden = false
                         }
                     }
                 case let .InsertDisappearingPlaceholder(index, referenceNodeObject, offsetDirection):
@@ -2665,6 +2681,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 scrollToItemTransition = .animated(duration: duration, curve: .spring)
                             case let .Default(duration):
                                 scrollToItemTransition = .animated(duration: duration ?? 0.3, curve: .easeInOut)
+                            case let .Custom(delay: delay, duration: duration, curve: curve):
+                                scrollToItemTransition = .animated(delay: delay, duration: duration ?? 0.3, curve: .custom(curve.0, curve.1, curve.2, curve.3))
                             }
                         }
                         
@@ -2751,6 +2769,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         updateSizeAndInsetsTransition = .animated(duration: duration, curve: .spring)
                     case let .Default(duration):
                         updateSizeAndInsetsTransition = .animated(duration: duration ?? 0.3, curve: .easeInOut)
+                    case let .Custom(delay: delay, duration: duration, curve: curve):
+                        updateSizeAndInsetsTransition = .animated(delay: delay, duration: duration ?? 0.3, curve: .custom(curve.0, curve.1, curve.2, curve.3))
                     }
                 }
                 
@@ -2812,6 +2832,18 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             animationDuration = duration ?? 0.3
                             let basicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
                             basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
+                            basicAnimation.duration = updateSizeAndInsets.duration * UIView.animationDurationFactor()
+                            basicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, -completeOffset, 0.0))
+                            basicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
+                            basicAnimation.isRemovedOnCompletion = true
+                            basicAnimation.isAdditive = true
+                            animation = basicAnimation
+                    case let .Custom(delay: delay, duration: duration, curve: curve):
+                        headerNodesTransition = (.animated(delay: delay, duration: max(duration ?? 0.3, updateSizeAndInsets.duration), curve: .custom(curve.0, curve.1, curve.2, curve.3)), false, -completeOffset)
+                            animationCurve = .custom(curve.0, curve.1, curve.2, curve.3)
+                            animationDuration = duration ?? 0.3
+                            let basicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
+                            basicAnimation.timingFunction = CAMediaTimingFunction(controlPoints: curve.0, curve.1, curve.2, curve.3)
                             basicAnimation.duration = updateSizeAndInsets.duration * UIView.animationDurationFactor()
                             basicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, -completeOffset, 0.0))
                             basicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
@@ -2993,6 +3025,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         headerNodesTransition = (.animated(duration: duration, curve: .spring), headerNodesTransition.1, headerNodesTransition.2 - offsetOrZero)
                     case let .Default(duration):
                         headerNodesTransition = (.animated(duration: duration ?? 0.3, curve: .easeInOut), true, headerNodesTransition.2 - offsetOrZero)
+                    case let .Custom(delay: delay, duration: duration, curve: curve):
+                        headerNodesTransition = (.animated(delay: delay, duration: duration ?? 0.3, curve: .custom(curve.0, curve.1, curve.2, curve.3)), true, headerNodesTransition.2 - offsetOrZero)
                 }
                 for (_, headerNode) in self.itemHeaderNodes {
                     previousItemHeaderNodes.append(headerNode)
@@ -3101,6 +3135,52 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 
                                 let reverseBasicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
                                 reverseBasicAnimation.timingFunction = ContainedViewLayoutTransitionCurve.slide.mediaTimingFunction
+                                reverseBasicAnimation.duration = (duration ?? 0.3) * UIView.animationDurationFactor()
+                                reverseBasicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, offset, 0.0))
+                                reverseBasicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
+                                reverseBasicAnimation.isRemovedOnCompletion = true
+                                reverseBasicAnimation.isAdditive = true
+                                
+                                animation = basicAnimation
+                                reverseAnimation = reverseBasicAnimation
+                            }
+                        case let .Custom(delay, duration, curve):
+                            if let duration = duration {
+                                animationCurve = .custom(curve.0, curve.1, curve.2, curve.3)
+                                animationDuration = duration
+                                let basicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
+                                basicAnimation.timingFunction = CAMediaTimingFunction(controlPoints: curve.0, curve.1, curve.2, curve.3)
+                                basicAnimation.duration = duration * UIView.animationDurationFactor()
+                                basicAnimation.beginTime = CACurrentMediaTime() + delay
+                                basicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, -offset, 0.0))
+                                basicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
+                                basicAnimation.isRemovedOnCompletion = true
+                                basicAnimation.isAdditive = true
+                                
+                                let reverseBasicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
+                                reverseBasicAnimation.timingFunction = CAMediaTimingFunction(controlPoints: curve.0, curve.1, curve.2, curve.3)
+                                reverseBasicAnimation.duration = duration * UIView.animationDurationFactor()
+                                reverseBasicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, offset, 0.0))
+                                reverseBasicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
+                                reverseBasicAnimation.isRemovedOnCompletion = true
+                                reverseBasicAnimation.isAdditive = true
+                                
+                                animation = basicAnimation
+                                reverseAnimation = reverseBasicAnimation
+                            } else {
+                                animationCurve = .custom(curve.0, curve.1, curve.2, curve.3)
+                                animationDuration = duration ?? 0.3
+                                
+                                let basicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
+                                basicAnimation.timingFunction = CAMediaTimingFunction(controlPoints: curve.0, curve.1, curve.2, curve.3)
+                                basicAnimation.duration = (duration ?? 0.3) * UIView.animationDurationFactor()
+                                basicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, -offset, 0.0))
+                                basicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
+                                basicAnimation.isRemovedOnCompletion = true
+                                basicAnimation.isAdditive = true
+                                
+                                let reverseBasicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
+                                reverseBasicAnimation.timingFunction = CAMediaTimingFunction(controlPoints: curve.0, curve.1, curve.2, curve.3)
                                 reverseBasicAnimation.duration = (duration ?? 0.3) * UIView.animationDurationFactor()
                                 reverseBasicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, offset, 0.0))
                                 reverseBasicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
@@ -3234,7 +3314,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 switch transition.0 {
                     case .immediate:
                         headerNode.frame = headerFrame
-                    case let .animated(duration, curve):
+                    case let .animated(delay, duration, curve):
                         let previousFrame = headerNode.frame
                         headerNode.frame = headerFrame
                         var offset = headerFrame.minY - previousFrame.minY + transition.2
@@ -3243,16 +3323,16 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         }
                         switch curve {
                             case .linear:
-                                 headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, mediaTimingFunction: CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear))
+                                headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, delay: delay, mediaTimingFunction: CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear))
                             case .spring:
                                 transition.0.animateOffsetAdditive(node: headerNode, offset: offset)
                             case let .custom(p1, p2, p3, p4):
-                                headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, mediaTimingFunction: CAMediaTimingFunction(controlPoints: p1, p2, p3, p4))
+                                headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, delay: delay, mediaTimingFunction: CAMediaTimingFunction(controlPoints: p1, p2, p3, p4))
                             case .easeInOut:
                                 if transition.1 {
-                                    headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, mediaTimingFunction: ContainedViewLayoutTransitionCurve.slide.mediaTimingFunction)
+                                    headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, delay: delay, mediaTimingFunction: ContainedViewLayoutTransitionCurve.slide.mediaTimingFunction)
                                 } else {
-                                    headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, mediaTimingFunction: CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut))
+                                    headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, delay: delay, mediaTimingFunction: CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut))
                                 }
                         }
                 }
@@ -3786,7 +3866,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         var index = 0
         while index < self.itemNodes.count {
             let itemNode = self.itemNodes[index]
-            
+//            if itemNode.insertionAnimationOverriden {
+//                continue
+//            }
             let previousApparentHeight = itemNode.apparentHeight
             if itemNode.animate(timestamp) {
                 continueAnimations = true
@@ -3836,6 +3918,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             requestUpdateVisibleItems = true
             var index = 0
             for itemNode in self.itemNodes {
+//                if itemNode.insertionAnimationOverriden {
+//                    continue
+//                }
                 let offset = offsetRanges.offsetForIndex(index)
                 if offset != 0.0 {
                     itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: offset), within: self.visibleSize)

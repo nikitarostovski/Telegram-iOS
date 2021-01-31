@@ -849,7 +849,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         
         self.headerNode.updateLayout(layout: layout, navigationBarHeight: navigationHeight, topPadding: self.state.displayingMapModeOptions ? optionsHeight : 0.0, offset: 0.0, size: headerFrame.size, transition: transition)
             
-        let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
+        let (_, duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         let scrollToItem: ListViewScrollToItem?
         if isPickingLocation {
             scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: curve, directionHint: .Up)

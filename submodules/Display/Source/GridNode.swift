@@ -497,6 +497,9 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                     var nextItemOrigin = CGPoint(x: initialSpacing + itemInsets.left, y: 0.0)
                     var index = 0
                     var previousSection: GridSection?
+                    
+                    var previousFillsRow = false
+                    
                     for item in self.items {
                         var itemSize = defaultItemSize
                         
@@ -507,6 +510,12 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         } else if (previousSection != nil) != (section != nil) {
                             keepSection = false
                         }
+                        
+                    
+                        if !previousFillsRow && item.fillsRowWithDynamicHeight != nil {
+                            keepSection = false
+                        }
+                        previousFillsRow = item.fillsRowWithDynamicHeight != nil
                         
                         if !keepSection {
                             if incrementedCurrentRow {
@@ -951,7 +960,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
             }
         }
         
-        if let previousItemFrames = previousItemFrames, case let .animated(duration, curve) = presentationLayoutTransition.transition {
+        if let previousItemFrames = previousItemFrames, case let .animated(delay, duration, curve) = presentationLayoutTransition.transition {
             let contentOffset = presentationLayoutTransition.layout.contentOffset
             
             if !updatingLayout {
@@ -1079,7 +1088,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                     itemNode.removeFromSupernode()
                 }
             }
-        } else if let previousItemFrames = previousItemFrames, case let .animated(duration, curve) = itemTransition {
+        } else if let previousItemFrames = previousItemFrames, case let .animated(delay, duration, curve) = itemTransition {
             let timingFunction = curve.timingFunction
             let mediaTimingFunction = curve.mediaTimingFunction
             let contentOffset = self.scrollView.contentOffset
@@ -1089,7 +1098,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                 if !existingItemIndices.contains(index) {
                     if let _ = previousItemFrames[WrappedGridItemNode(node: itemNode)] {
                         self.removeItemNodeWithIndex(index, removeNode: false)
-                        itemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue, removeOnCompletion: false)
+                        itemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: delay, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue, removeOnCompletion: false)
                         itemNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue, removeOnCompletion: false, completion: { [weak itemNode] _ in
                             itemNode?.removeFromSupernode()
                         })

@@ -1103,7 +1103,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         if visible != currentVisible {
             let color = visible ? UIColor(rgb: 0x000000, alpha: 0.3) : UIColor.clear
             let image: UIImage? = visible ? nil : generateGradientImage(size: CGSize(width: 1.0, height: 640.0), colors: [UIColor.black.withAlphaComponent(0.3), UIColor.clear, UIColor.clear, UIColor.black.withAlphaComponent(0.3)], locations: [0.0, 0.22, 0.7, 1.0])
-            if case let .animated(duration, _) = transition {
+            if case let .animated(_, duration, _) = transition {
                 UIView.transition(with: self.dimNode.view, duration: duration, options: .transitionCrossDissolve, animations: {
                     self.dimNode.backgroundColor = color
                     self.dimNode.image = image

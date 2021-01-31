@@ -277,8 +277,10 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 if let entities = entities {
                     attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont)
-                } else {
+                } else if !rawText.isEmpty {
                     attributedText = NSAttributedString(string: rawText, font: textFont, textColor: messageTheme.primaryTextColor)
+                } else {
+                    attributedText = NSAttributedString(string: " ", font: textFont, textColor: messageTheme.primaryTextColor)
                 }
                 
                 var cutout: TextNodeCutout?
@@ -337,6 +339,12 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         boundingSize = textFrameWithoutInsets.size
                         boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                         boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
+                    }
+                    
+                    if attributedText.string.isEmpty, var adjustedStatusFrameValue = adjustedStatusFrame {
+                        adjustedStatusFrameValue.origin.y = 1.0
+                        boundingSize.height = adjustedStatusFrameValue.maxY + 5.0
+                        adjustedStatusFrame = adjustedStatusFrameValue
                     }
                     
                     return (boundingSize, { [weak self] animation, _ in
@@ -407,6 +415,17 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             strongSelf.textAccessibilityOverlayNode.frame = textFrame
                             strongSelf.textAccessibilityOverlayNode.cachedLayout = textLayout
+                            
+                            if let forwardInfo = item.message.forwardInfo, forwardInfo.flags.contains(.isImported) {
+                                strongSelf.statusNode.pressed = {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    item.controllerInteraction.displayImportedMessageTooltip(strongSelf.statusNode)
+                                }
+                            } else {
+                                strongSelf.statusNode.pressed = nil
+                            }
                         }
                     })
                 })
@@ -415,8 +434,39 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
-        self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-        self.statusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        super.animateInsertion(currentTimestamp, duration: duration)
+    }
+    
+    override func animateCustomInsertion() {
+        guard let settings = AnimationManager.shared.settings.data[.smallMessage] as? SmallMessageSettings else { return }
+        guard let controllerNode = AnimationManager.shared.controllerNode else { return }
+        
+        let inputPanel = controllerNode.textInputPanelNode?.textInputNode
+        let inputContainer = controllerNode.textInputPanelNode?.textInputContainer
+        
+        let inputFrame = inputPanel?.frame ?? .zero
+        let containerFrame = inputContainer?.frame ?? .zero
+        
+        let tx = inputFrame.minX + containerFrame.minX
+        let ty = inputFrame.minY + containerFrame.minY + (controllerNode.accessoryCur?.frame.height ?? 0)
+        let tw = inputFrame.width
+        let th = inputPanel?.layer.presentFrame.height ?? 0
+        let textFrame = CGRect(x: tx, y: ty + 3, width: tw, height: th)
+        
+        
+        
+        
+        let statusRight = bounds.width - statusNode.frame.maxX
+        let statusBottom = bounds.height - statusNode.frame.maxY
+        let statusRect = CGRect(x: containerFrame.maxX - statusRight - statusNode.frame.width,
+                                y: containerFrame.maxY - statusBottom - statusNode.frame.height,
+                                width: statusNode.frame.width,
+                                height: statusNode.frame.height)
+        
+        
+        AnimationManager.shared.animate(textNode, from: textFrame, curveX: settings.curveX, curveY: settings.curveY)
+        AnimationManager.shared.animate(statusNode, from: statusRect, curveX: settings.curveStatus, curveY: settings.curveStatus)
+        AnimationManager.shared.animate(statusNode, fromAlpha: 0, toAlpha: 1, curve: settings.curveStatus)
     }
     
     override func animateAdded(_ currentTimestamp: Double, duration: Double) {
@@ -616,5 +666,9 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             return self.statusNode.reactionNode(value: value)
         }
         return nil
+    }
+    
+    override func getStatusNode() -> ASDisplayNode? {
+        return self.statusNode
     }
 }

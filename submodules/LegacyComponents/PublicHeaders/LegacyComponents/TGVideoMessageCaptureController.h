@@ -17,6 +17,8 @@
 
 @property (nonatomic, strong) TGModernConversationInputMicPallete *pallete;
 
+@property (nonatomic) CGRect circeFrame;
+
 @property (nonatomic, copy) id (^requestActivityHolder)();
 @property (nonatomic, copy) void (^micLevel)(CGFloat level);
 @property (nonatomic, copy) void (^onDuration)(NSTimeInterval duration);
@@ -36,6 +38,7 @@
 - (CGRect)frameForSendButton;
 
 - (void)complete;
+- (void)dismissImmediately;
 - (void)dismiss;
 - (bool)stop;
 

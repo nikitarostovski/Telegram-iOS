@@ -94,6 +94,10 @@ public final class PresentationData: Equatable {
         return PresentationData(strings: self.strings, theme: theme, autoNightModeTriggered: self.autoNightModeTriggered, chatWallpaper: self.chatWallpaper, chatFontSize: self.chatFontSize, chatBubbleCorners: self.chatBubbleCorners, listsFontSize: self.listsFontSize, dateTimeFormat: self.dateTimeFormat, nameDisplayOrder: self.nameDisplayOrder, nameSortOrder: self.nameSortOrder, disableAnimations: self.disableAnimations, largeEmoji: self.largeEmoji)
     }
     
+    public func withUpdated(wallpaper: TelegramWallpaper) -> PresentationData {
+        return PresentationData(strings: self.strings, theme: self.theme, autoNightModeTriggered: self.autoNightModeTriggered, chatWallpaper: wallpaper, chatFontSize: self.chatFontSize, chatBubbleCorners: self.chatBubbleCorners, listsFontSize: self.listsFontSize, dateTimeFormat: self.dateTimeFormat, nameDisplayOrder: self.nameDisplayOrder, nameSortOrder: self.nameSortOrder, disableAnimations: self.disableAnimations, largeEmoji: self.largeEmoji)
+    }
+    
     public static func ==(lhs: PresentationData, rhs: PresentationData) -> Bool {
         return lhs.strings === rhs.strings && lhs.theme === rhs.theme && lhs.autoNightModeTriggered == rhs.autoNightModeTriggered && lhs.chatWallpaper == rhs.chatWallpaper && lhs.chatFontSize == rhs.chatFontSize && lhs.chatBubbleCorners == rhs.chatBubbleCorners && lhs.listsFontSize == rhs.listsFontSize && lhs.dateTimeFormat == rhs.dateTimeFormat && lhs.disableAnimations == rhs.disableAnimations && lhs.largeEmoji == rhs.largeEmoji
     }
@@ -275,6 +279,13 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager, s
         
         let effectiveChatWallpaper: TelegramWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: effectiveTheme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[effectiveTheme.index]) ?? theme.chat.defaultWallpaper
         
+//        let c1 = UIColor.red
+//        let c2 = UIColor.green
+//        let c3 = UIColor.blue
+//        let c4 = UIColor.yellow
+//
+//        let effectiveChatWallpaper: TelegramWallpaper = .animatedGradient(c1.rgb, c2.rgb, c3.rgb, c4.rgb, WallpaperSettings())
+        
         let dateTimeFormat = currentDateTimeFormat()
         let stringsValue: PresentationStrings
         if let localizationSettings = localizationSettings {
@@ -418,6 +429,11 @@ public func serviceColor(from image: Signal<UIImage?, NoError>) -> Signal<UIColo
 
 public func serviceColor(for wallpaper: (TelegramWallpaper, UIImage?)) -> UIColor {
     switch wallpaper.0 {
+        case let .animatedGradient(c1, c2, c3, c4, _):
+            return UIColor(argb: c1)
+                .mixedWith(UIColor(rgb: c2), alpha: 0.25)
+                .mixedWith(UIColor(rgb: c3), alpha: 0.25)
+                .mixedWith(UIColor(rgb: c4), alpha: 0.25)
         case .builtin:
             return UIColor(rgb: 0x748391, alpha: 0.45)
         case let .color(color):
@@ -473,6 +489,12 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
         return .single(color)
     } else {
         switch wallpaper {
+        case let .animatedGradient(c1, c2, c3, c4, _):
+            let mixedColor = UIColor(argb: c1)
+                .mixedWith(UIColor(rgb: c2), alpha: 0.25)
+                .mixedWith(UIColor(rgb: c3), alpha: 0.25)
+                .mixedWith(UIColor(rgb: c4), alpha: 0.25)
+            return  .single(mixedColor)
         case .builtin:
             return .single(UIColor(rgb: 0x748391, alpha: 0.45))
         case let .color(color):

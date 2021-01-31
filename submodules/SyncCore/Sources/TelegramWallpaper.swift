@@ -80,6 +80,7 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     case gradient(UInt32, UInt32, WallpaperSettings)
     case image([TelegramMediaImageRepresentation], WallpaperSettings)
     case file(id: Int64, accessHash: Int64, isCreator: Bool, isDefault: Bool, isPattern: Bool, isDark: Bool, slug: String, file: TelegramMediaFile, settings: WallpaperSettings)
+    case animatedGradient(UInt32, UInt32, UInt32, UInt32, WallpaperSettings)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
@@ -118,6 +119,13 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     
     public func encode(_ encoder: PostboxEncoder) {
         switch self {
+            case let .animatedGradient(color1, color2, color3, color4, settings):
+                encoder.encodeInt32(5, forKey: "v")
+                encoder.encodeInt32(Int32(bitPattern: color1), forKey: "c1")
+                encoder.encodeInt32(Int32(bitPattern: color2), forKey: "c2")
+                encoder.encodeInt32(Int32(bitPattern: color3), forKey: "c3")
+                encoder.encodeInt32(Int32(bitPattern: color4), forKey: "c4")
+                encoder.encodeObject(settings, forKey: "settings")
             case let .builtin(settings):
                 encoder.encodeInt32(0, forKey: "v")
                 encoder.encodeObject(settings, forKey: "settings")
@@ -149,6 +157,12 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     
     public static func ==(lhs: TelegramWallpaper, rhs: TelegramWallpaper) -> Bool {
         switch lhs {
+            case let .animatedGradient(color1, color2, color3, color4, settings):
+                if case .animatedGradient(color1, color2, color3, color4, settings) = rhs {
+                    return true
+                } else {
+                    return false
+                }
             case let .builtin(settings):
                 if case .builtin(settings) = rhs {
                     return true
@@ -184,6 +198,12 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     
     public func isBasicallyEqual(to wallpaper: TelegramWallpaper) -> Bool {
         switch self {
+            case let .animatedGradient(color1, color2, color3, color4, _):
+                if case .animatedGradient(color1, color2, color3, color4, _) = wallpaper {
+                    return true
+                } else {
+                    return false
+                }
             case .builtin:
                 if case .builtin = wallpaper {
                     return true
@@ -228,6 +248,8 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     
     public func withUpdatedSettings(_ settings: WallpaperSettings) -> TelegramWallpaper {
         switch self {
+            case let .animatedGradient(color1, color2, color3, color4, _):
+                return .animatedGradient(color1, color2, color3, color4, settings)
             case .builtin:
                 return .builtin(settings)
             case .color:

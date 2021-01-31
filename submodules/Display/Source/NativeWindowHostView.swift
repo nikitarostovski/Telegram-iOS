@@ -256,7 +256,7 @@ private final class NativeWindow: UIWindow, WindowHost {
                     frameTransition = .animated(duration: duration, curve: .easeInOut)
                 }
             }
-            if sizeUpdated, case let .animated(duration, curve) = frameTransition {
+            if sizeUpdated, case let .animated(0.0, duration, curve) = frameTransition {
                 let previousFrame = super.frame
                 super.frame = value
                 self.layer.animateFrame(from: previousFrame, to: value, duration: duration, timingFunction: curve.timingFunction)

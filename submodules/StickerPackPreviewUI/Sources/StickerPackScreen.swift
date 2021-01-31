@@ -514,7 +514,7 @@ private final class StickerPackContainer: ASDisplayNode {
         }
         
         let contentOffset = (1.0 - expandScrollProgress) * (-gridInsets.top)
-        if case let .animated(duration, _) = transition {
+        if case let .animated(_, duration, _) = transition {
             self.gridNode.autoscroll(toOffset: CGPoint(x: 0.0, y: contentOffset), duration: duration)
         } else {
             if expandScrollProgress.isZero {

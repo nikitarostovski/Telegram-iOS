@@ -1700,7 +1700,18 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             
             let loadState: ChatHistoryNodeLoadState
             if transition.historyView.filteredEntries.isEmpty {
-                loadState = .empty
+                if let firstEntry = transition.historyView.originalView.entries.first {
+                    var isPeerJoined = false
+                    for media in firstEntry.message.media {
+                        if let action = media as? TelegramMediaAction, action.action == .peerJoined {
+                            isPeerJoined = true
+                            break
+                        }
+                    }
+                    loadState = .empty(isPeerJoined ? .joined : .generic)
+                } else {
+                    loadState = .empty(.generic)
+                }
             } else {
                 loadState = .messages
             }
@@ -1715,6 +1726,13 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 self.historyState.set(historyState)
             }
         }
+    }
+    
+    func removeAllTransitions() {
+        
+        // todo: remove current animation
+//        enqueuedHistoryViewTransitions.removeAll()
+//        self.hasActiveTransition = false
     }
     
     private func dequeueHistoryViewTransitions() {
@@ -1733,7 +1751,18 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 let loadState: ChatHistoryNodeLoadState
                 if let historyView = strongSelf.historyView {
                     if historyView.filteredEntries.isEmpty {
-                        loadState = .empty
+                        if let firstEntry = historyView.originalView.entries.first {
+                            var isPeerJoined = false
+                            for media in firstEntry.message.media {
+                                if let action = media as? TelegramMediaAction, action.action == .peerJoined {
+                                    isPeerJoined = true
+                                    break
+                                }
+                            }
+                            loadState = .empty(isPeerJoined ? .joined : .generic)
+                        } else {
+                            loadState = .empty(.generic)
+                        }
                     } else {
                         loadState = .messages
                     }
@@ -1771,7 +1800,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             }
                         }
                     }
+                } else if case .empty(.joined) = loadState, let entry = transition.historyView.originalView.entries.first {
+                    strongSelf.updateMaxVisibleReadIncomingMessageIndex(entry.message.index)
                 }
+                
                 if !strongSelf.didSetInitialData {
                     strongSelf.didSetInitialData = true
                     strongSelf._initialData.set(.single(ChatHistoryCombinedInitialData(initialData: transition.initialData, buttonKeyboardMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData)))

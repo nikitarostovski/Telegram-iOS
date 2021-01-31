@@ -3,14 +3,14 @@ import UIKit
 import AsyncDisplayKit
 import Display
 
-private final class VoiceChatIndicatorNode: ASDisplayNode {
+public final class VoiceChatIndicatorNode: ASDisplayNode {
     private let leftLine: ASDisplayNode
     private let centerLine: ASDisplayNode
     private let rightLine: ASDisplayNode
     
     private var isCurrentlyInHierarchy = true
     
-    var color: UIColor = UIColor(rgb: 0xffffff) {
+    public var color: UIColor = UIColor(rgb: 0xffffff) {
         didSet {
             self.leftLine.backgroundColor = self.color
             self.centerLine.backgroundColor = self.color
@@ -18,7 +18,7 @@ private final class VoiceChatIndicatorNode: ASDisplayNode {
         }
     }
     
-    override init() {
+    override public init() {
         self.leftLine = ASDisplayNode()
         self.leftLine.clipsToBounds = true
         self.leftLine.isLayerBacked = true
@@ -45,17 +45,19 @@ private final class VoiceChatIndicatorNode: ASDisplayNode {
         self.addSubnode(self.centerLine)
         self.addSubnode(self.rightLine)
         
-        self.updateAnimation()
+        if Thread.isMainThread {
+            self.updateAnimation()
+        }
     }
     
-    override func didEnterHierarchy() {
+    override public func didEnterHierarchy() {
         super.didEnterHierarchy()
         
         self.isCurrentlyInHierarchy = true
         self.updateAnimation()
     }
     
-    override func didExitHierarchy() {
+    override public func didExitHierarchy() {
         super.didExitHierarchy()
         
         self.isCurrentlyInHierarchy = false
@@ -125,12 +127,12 @@ public final class PeerOnlineMarkerNode: ASDisplayNode {
     }
     
     public func setImage(_ image: UIImage?, color: UIColor?, transition: ContainedViewLayoutTransition) {
-        if case let .animated(duration, curve) = transition, !self.iconNode.isHidden {
+        if case let .animated(delay, duration, curve) = transition, !self.iconNode.isHidden {
             let snapshotLayer = CALayer()
             snapshotLayer.contents = self.iconNode.layer.contents
             snapshotLayer.frame = self.iconNode.bounds
             self.iconNode.layer.insertSublayer(snapshotLayer, at: 0)
-            snapshotLayer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: curve.timingFunction, removeOnCompletion: false, completion: { [weak snapshotLayer] _ in
+            snapshotLayer.animateAlpha(from: 1.0, to: 0.0, duration: duration, delay: delay, timingFunction: curve.timingFunction, removeOnCompletion: false, completion: { [weak snapshotLayer] _ in
                 snapshotLayer?.removeFromSuperlayer()
             })
         }

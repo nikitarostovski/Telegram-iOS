@@ -1,11 +1,31 @@
 import Foundation
 import UIKit
+import Display
 import AsyncDisplayKit
+import MetalKit
+import simd
 
 private let motionAmount: CGFloat = 32.0
 
+public typealias AnimatedBackgroundPoint = (color: UIColor, point: CGPoint)
+public typealias AnimatedBackgroundState = (AnimatedBackgroundPoint,
+                                            AnimatedBackgroundPoint,
+                                            AnimatedBackgroundPoint,
+                                            AnimatedBackgroundPoint)
+
+
+
 public final class WallpaperBackgroundNode: ASDisplayNode {
-    let contentNode: ASDisplayNode
+    fileprivate let contentNode: ContentNode
+    
+    public var animationCurve: (Float, Float, Float, Float) = (0, 0, 1, 1)
+    public var animationDelay: TimeInterval = 0
+    public var animationDuration: TimeInterval = 1
+    
+    public var color1: UIColor = .red
+    public var color2: UIColor = .red
+    public var color3: UIColor = .red
+    public var color4: UIColor = .red
     
     public var motionEnabled: Bool = false {
         didSet {
@@ -36,7 +56,15 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         
     public var image: UIImage? {
         didSet {
-            self.contentNode.contents = self.image?.cgImage
+            self.contentNode.updateContent(image: self.image?.cgImage,
+                                           colors: self.animatedGradientColors)
+        }
+    }
+    
+    public var animatedGradientColors: (UInt32, UInt32, UInt32, UInt32)? {
+        didSet {
+            self.contentNode.updateContent(image: self.image?.cgImage,
+                                           colors: self.animatedGradientColors)
         }
     }
     
@@ -69,14 +97,29 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     public override init() {
         self.imageContentMode = .scaleAspectFill
         
-        self.contentNode = ASDisplayNode()
+        self.contentNode = ContentNode()
         self.contentNode.contentMode = self.imageContentMode
         
         super.init()
         
         self.clipsToBounds = true
         self.contentNode.frame = self.bounds
+        
         self.addSubnode(self.contentNode)
+    }
+    
+    public func updateData() {
+        contentNode.animationDelay = animationDelay
+        contentNode.animationDuration = animationDuration
+        contentNode.animationCurve = animationCurve
+        contentNode.color1 = color1
+        contentNode.color2 = color2
+        contentNode.color3 = color3
+        contentNode.color4 = color4
+    }
+    
+    public func animate() {
+        contentNode.animate()
     }
     
     public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
@@ -87,5 +130,64 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         if isFirstLayout && !self.frame.isEmpty {
             self.updateScale()
         }
+    }
+}
+
+
+fileprivate class ContentNode: ASDisplayNode {
+    
+    public var animationCurve: (Float, Float, Float, Float) = (0, 0, 1, 1)
+    public var animationDelay: TimeInterval = 0
+    public var animationDuration: TimeInterval = 1
+    
+    public var color1: UIColor = .red
+    public var color2: UIColor = .red
+    public var color3: UIColor = .red
+    public var color4: UIColor = .red
+    
+    var background: BackgroundView?
+    
+    override func layout() {
+        super.layout()
+        
+        if let background = background {
+            background.frame = self.bounds
+        }
+    }
+    
+    func updateContent(image: CGImage?, colors: (UInt32, UInt32, UInt32, UInt32)?) {
+        if let image = image {
+            self.contents = image
+            removeMetalViewIfNeeded()
+        } else if let colors = colors {
+            self.contents = nil
+            configureMetalViewIfNeeded()
+        }
+    }
+    
+    func animate() {
+        background?.animate()
+    }
+    
+    private func configureMetalViewIfNeeded() {
+        removeMetalViewIfNeeded()
+        let v = BackgroundView(frame: bounds)
+        
+        v.animationDelay = animationDelay
+        v.animationDuration = animationDuration
+        v.animationCurve = animationCurve
+        v.color1 = color1
+        v.color2 = color2
+        v.color3 = color3
+        v.color4 = color4
+        
+        self.view.addSubview(v)
+        self.background = v
+    }
+    
+    private func removeMetalViewIfNeeded() {
+        guard let background = background else { return }
+        background.removeFromSuperview()
+        self.background = nil
     }
 }

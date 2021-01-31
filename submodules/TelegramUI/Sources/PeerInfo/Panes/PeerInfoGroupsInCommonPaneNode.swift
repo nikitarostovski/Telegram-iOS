@@ -64,6 +64,8 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private let openPeerContextAction: (Peer, ASDisplayNode, ContextGesture?) -> Void
     private let groupsInCommonContext: GroupsInCommonContext
     
+    weak var parentController: ViewController?
+    
     private let listNode: ListView
     private var state: GroupsInCommonState?
     private var currentEntries: [GroupsInCommonListEntry] = []
@@ -76,9 +78,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
     var isReady: Signal<Bool, NoError> {
         return self.ready.get()
     }
-    
-    let shouldReceiveExpandProgressUpdates: Bool = false
-    
+        
     private var disposable: Disposable?
     
     init(context: AccountContext, peerId: PeerId, chatControllerInteraction: ChatControllerInteraction, openPeerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, groupsInCommonContext: GroupsInCommonContext) {
@@ -134,7 +134,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         self.currentParams = (size, isScrollingLockedAtTop, presentationData)
         
         transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
-        let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
+        let (_, duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         
         var scrollToItem: ListViewScrollToItem?
         if isScrollingLockedAtTop {

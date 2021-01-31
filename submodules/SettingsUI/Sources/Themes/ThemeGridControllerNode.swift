@@ -71,6 +71,12 @@ private struct ThemeGridControllerEntry: Comparable, Identifiable {
     
     var stableId: Int64 {
         switch self.wallpaper {
+            case let .animatedGradient(c1, c2, c3, c4, _):
+                var hash: UInt32 = c1
+                hash = hash &* 31 &+ c2
+                hash = hash &* 31 &+ c3
+                hash = hash &* 31 &+ c4
+                return (Int64(5) << 32) | Int64(hash)
             case .builtin:
                 return 0
             case let .color(color):

@@ -336,6 +336,9 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
             return
         }
         if let interfaceInteraction = self.interfaceInteraction, let (_, item, _) = self.currentState, case .ended = recognizer.state {
+            AnimationManager.shared.stickerNode = self
+            AnimationManager.shared.tapSource = .sticker
+            AnimationManager.shared.shouldAnimateInsertion = true
             let _ = interfaceInteraction.sendSticker(.standalone(media: item.file), nil, false, self, self.bounds)
             self.imageNode.layer.animateAlpha(from: 0.5, to: 1.0, duration: 1.0)
         }

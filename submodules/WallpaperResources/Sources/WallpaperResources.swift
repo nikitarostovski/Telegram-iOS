@@ -1203,6 +1203,9 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                 let incomingColor = (theme.chat.message.incoming.bubble.withoutWallpaper.fill, theme.chat.message.incoming.bubble.withoutWallpaper.gradientFill)
                 let outgoingColor = (theme.chat.message.outgoing.bubble.withoutWallpaper.fill, theme.chat.message.outgoing.bubble.withoutWallpaper.gradientFill)
                 switch theme.chat.defaultWallpaper {
+                    case let .animatedGradient(c1, c2, c3, c4, settings):
+                        backgroundColor = (UIColor(rgb: c1), UIColor(rgb: c2))
+                        rotation = settings.rotation
                     case .builtin:
                         backgroundColor = (UIColor(rgb: 0xd6e2ee), nil)
                     case let .color(color):

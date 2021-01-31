@@ -615,7 +615,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
         transition.updateAlpha(node: self.trendingPane, alpha: 1.0, completion: { _ in
         })
         
-        if case let .animated(duration, curve) = transition {
+        if case let .animated(_, duration, curve) = transition {
             self.trendingPane.layer.animatePosition(from: CGPoint(x: 0.0, y: additivePosition), to: CGPoint(), duration: duration, timingFunction: curve.timingFunction, additive: true)
         }
     }

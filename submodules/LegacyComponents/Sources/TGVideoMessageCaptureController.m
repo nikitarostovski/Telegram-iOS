@@ -636,6 +636,8 @@ typedef enum
     self.view.backgroundColor = [UIColor clearColor];
     self.view.userInteractionEnabled = false;
     
+    self.circeFrame = _circleWrapperView.frame;
+    
     [UIView animateWithDuration:0.15 animations:^
     {
         _circleWrapperView.alpha = 0.0f;
@@ -962,6 +964,7 @@ typedef enum
 
 - (void)finishWithURL:(NSURL *)url dimensions:(CGSize)dimensions duration:(NSTimeInterval)duration liveUploadData:(id )liveUploadData thumbnailImage:(UIImage *)thumbnailImage isSilent:(bool)isSilent scheduleTimestamp:(int32_t)scheduleTimestamp
 {
+    
     if (duration < 1.0)
         _dismissed = true;
     
@@ -1015,9 +1018,10 @@ typedef enum
         }
     }
     
-    if (!_dismissed && self.finishedWithVideo != nil)
+    if (!_dismissed && self.finishedWithVideo != nil) {
+        [self dismissImmediately];
         self.finishedWithVideo(url, image, fileSize, duration, dimensions, liveUploadData, adjustments, isSilent, scheduleTimestamp);
-    else
+    } else
         [[NSFileManager defaultManager] removeItemAtURL:url error:NULL];
 }
 

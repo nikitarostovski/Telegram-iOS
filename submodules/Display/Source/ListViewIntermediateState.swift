@@ -22,6 +22,7 @@ public enum ListViewScrollToItemDirectionHint {
 public enum ListViewAnimationCurve {
     case Spring(duration: Double)
     case Default(duration: Double?)
+    case Custom(delay: Double = 0.0, duration: Double?, curve: (Float, Float, Float, Float))
 }
 
 public struct ListViewScrollToItem {
@@ -108,15 +109,17 @@ public struct ListViewUpdateSizeAndInsets {
     public let insets: UIEdgeInsets
     public let headerInsets: UIEdgeInsets?
     public let scrollIndicatorInsets: UIEdgeInsets?
+    public let delay: Double
     public let duration: Double
     public let curve: ListViewAnimationCurve
     public let ensureTopInsetForOverlayHighlightedItems: CGFloat?
     
-    public init(size: CGSize, insets: UIEdgeInsets, headerInsets: UIEdgeInsets? = nil, scrollIndicatorInsets: UIEdgeInsets? = nil, duration: Double, curve: ListViewAnimationCurve, ensureTopInsetForOverlayHighlightedItems: CGFloat? = nil) {
+    public init(size: CGSize, insets: UIEdgeInsets, headerInsets: UIEdgeInsets? = nil, scrollIndicatorInsets: UIEdgeInsets? = nil, duration: Double, delay: Double = 0.0, curve: ListViewAnimationCurve, ensureTopInsetForOverlayHighlightedItems: CGFloat? = nil) {
         self.size = size
         self.insets = insets
         self.headerInsets = headerInsets
         self.scrollIndicatorInsets = scrollIndicatorInsets
+        self.delay = delay
         self.duration = duration
         self.curve = curve
         self.ensureTopInsetForOverlayHighlightedItems = ensureTopInsetForOverlayHighlightedItems
@@ -711,7 +714,25 @@ struct ListViewState {
         }
         
         let nodeFrame = CGRect(origin: nodeOrigin, size: CGSize(width: layout.size.width, height: animated ? 0.0 : layout.size.height))
+        //silent
         
+//        if realNode.insertionAnimationOverriden, let animationClosure = realNode.insertionAnimation {
+//            preAddClosure(fakeNode)
+//            addClosure(fakeNode)
+//            animationClosure {
+//                preAddClosure(realNode)
+//                addClosure(realNode)
+//            }
+//        } else {
+//            preAddClosure(realNode)
+//            addClosure(realNode)
+//        }
+        
+//        if let realNode = node.syncWith({ $0 }), realNode.insertionAnimationOverriden, realNode.insertionAnimation != nil {
+//
+//        } else {
+//
+//        }
         operations.append(.InsertNode(index: insertionIndex, offsetDirection: offsetDirection, animated: animated, node: node, layout: layout, apply: apply))
         self.nodes.insert(.Node(index: itemIndex, frame: nodeFrame, referenceNode: nil), at: insertionIndex)
         

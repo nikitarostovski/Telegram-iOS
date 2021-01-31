@@ -143,7 +143,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
         let currentNodes = self.messageNodes
         
         return { item, params, neighbors in
-            var updatedBackgroundSignal: Signal<(UIImage?, Bool)?, NoError>?
+            var updatedBackgroundSignal: Signal<(UIImage?, (UInt32, UInt32, UInt32, UInt32)?, Bool)?, NoError>?
             if currentItem?.wallpaper != item.wallpaper {
                 updatedBackgroundSignal = chatControllerBackgroundImageSignal(wallpaper: item.wallpaper, mediaBox: item.context.sharedContext.accountManager.mediaBox, accountMediaBox: item.context.account.postbox.mediaBox)
             }
@@ -228,7 +228,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                     if let updatedBackgroundSignal = updatedBackgroundSignal {
                         strongSelf.disposable.set((updatedBackgroundSignal
                         |> deliverOnMainQueue).start(next: { [weak self] image in
-                            if let strongSelf = self, let (image, final) = image {
+                            if let strongSelf = self, let (image, colors, final) = image {
                                 if final && !strongSelf.finalImage {
                                     let tempLayer = CALayer()
                                     tempLayer.frame = strongSelf.backgroundNode.bounds

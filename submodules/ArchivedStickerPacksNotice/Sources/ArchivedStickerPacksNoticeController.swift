@@ -229,8 +229,8 @@ private final class ArchivedStickersNoticeAlertContentNode: AlertContentNode {
         
         let listHeight: CGFloat = CGFloat(min(3, self.archivedStickerPacks.count)) * 56.0
         
-        let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
-        self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: resultWidth, height: listHeight), insets: UIEdgeInsets(top: -35.0, left: 0.0, bottom: 0.0, right: 0.0), headerInsets: UIEdgeInsets(), scrollIndicatorInsets: UIEdgeInsets(), duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        let (delay, duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
+        self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: resultWidth, height: listHeight), insets: UIEdgeInsets(top: -35.0, left: 0.0, bottom: 0.0, right: 0.0), headerInsets: UIEdgeInsets(), scrollIndicatorInsets: UIEdgeInsets(), duration: duration, delay: delay, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         transition.updateFrame(node: self.listView, frame: CGRect(x: 0.0, y: origin.y, width: resultWidth, height: listHeight))
         
         let resultSize = CGSize(width: resultWidth, height: textSize.height + actionsHeight + listHeight + 10.0 + insets.top + insets.bottom)

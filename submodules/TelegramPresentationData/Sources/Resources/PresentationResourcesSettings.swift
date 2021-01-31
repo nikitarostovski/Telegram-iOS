@@ -23,6 +23,7 @@ private func renderIcon(name: String) -> UIImage? {
 }
 
 public struct PresentationResourcesSettings {
+    public static let animations = renderIcon(name: "Settings/MenuIcons/Animations")
     public static let editProfile = renderIcon(name: "Settings/MenuIcons/EditProfile")
     public static let proxy = renderIcon(name: "Settings/MenuIcons/Proxy")
     public static let savedMessages = renderIcon(name: "Settings/MenuIcons/SavedMessages")

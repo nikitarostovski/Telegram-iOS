@@ -153,6 +153,9 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     open func longTapped() {
     }
     
+    open var insertionAnimationOverriden = false
+    open var insertionAnimation: ((_ completion: @escaping () -> Void) -> Void)?
+    
     public final var insets: UIEdgeInsets = UIEdgeInsets() {
         didSet {
             let effectiveInsets = self.insets
@@ -321,6 +324,8 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     }
     
     public func animate(_ timestamp: Double) -> Bool {
+        guard !self.insertionAnimationOverriden else { return false }
+        
         var continueAnimations = false
         
         if let _ = self.spring {

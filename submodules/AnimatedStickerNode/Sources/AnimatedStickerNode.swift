@@ -72,8 +72,9 @@ public final class AnimatedStickerFrame {
     public let bytesPerRow: Int
     let index: Int
     let isLastFrame: Bool
+    let totalFrames: Int
     
-    init(data: Data, type: AnimationRendererFrameType, width: Int, height: Int, bytesPerRow: Int, index: Int, isLastFrame: Bool) {
+    init(data: Data, type: AnimationRendererFrameType, width: Int, height: Int, bytesPerRow: Int, index: Int, isLastFrame: Bool, totalFrames: Int) {
         self.data = data
         self.type = type
         self.width = width
@@ -81,6 +82,7 @@ public final class AnimatedStickerFrame {
         self.bytesPerRow = bytesPerRow
         self.index = index
         self.isLastFrame = isLastFrame
+        self.totalFrames = totalFrames
     }
 }
 
@@ -93,8 +95,8 @@ public protocol AnimatedStickerFrameSource: class {
     func skipToEnd()
 }
 
-private final class AnimatedStickerFrameSourceWrapper {
-    let value: AnimatedStickerFrameSource
+public final class AnimatedStickerFrameSourceWrapper {
+    public let value: AnimatedStickerFrameSource
     
     init(_ value: AnimatedStickerFrameSource) {
         self.value = value
@@ -255,7 +257,7 @@ public final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource 
         }
         
         if let frameData = frameData, draw {
-            return AnimatedStickerFrame(data: frameData, type: .yuva, width: self.width, height: self.height, bytesPerRow: self.bytesPerRow, index: frameIndex, isLastFrame: isLastFrame)
+            return AnimatedStickerFrame(data: frameData, type: .yuva, width: self.width, height: self.height, bytesPerRow: self.bytesPerRow, index: frameIndex, isLastFrame: isLastFrame, totalFrames: self.frameCount)
         } else {
             return nil
         }
@@ -594,7 +596,7 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
     private let bytesPerRow: Int
     let frameCount: Int
     let frameRate: Int
-    fileprivate var currentFrame: Int
+    public var currentFrame: Int
     private let animation: LottieInstance
     
     var frameIndex: Int {
@@ -633,7 +635,7 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
         self.currentFrame += 1
         if draw {
             if let cache = self.cache, let yuvData = cache.readUncompressedYuvFrame(index: frameIndex) {
-                return AnimatedStickerFrame(data: yuvData, type: .yuva, width: self.width, height: self.height, bytesPerRow: 0, index: frameIndex, isLastFrame: frameIndex == self.frameCount - 1)
+                return AnimatedStickerFrame(data: yuvData, type: .yuva, width: self.width, height: self.height, bytesPerRow: 0, index: frameIndex, isLastFrame: frameIndex == self.frameCount - 1, totalFrames: self.frameCount)
             } else {
                 var frameData = Data(count: self.bytesPerRow * self.height)
                 frameData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
@@ -643,7 +645,7 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
                 if let cache = self.cache {
                     cache.storeUncompressedRgbFrame(index: frameIndex, rgbData: frameData)
                 }
-                return AnimatedStickerFrame(data: frameData, type: .argb, width: self.width, height: self.height, bytesPerRow: self.bytesPerRow, index: frameIndex, isLastFrame: frameIndex == self.frameCount - 1)
+                return AnimatedStickerFrame(data: frameData, type: .argb, width: self.width, height: self.height, bytesPerRow: self.bytesPerRow, index: frameIndex, isLastFrame: frameIndex == self.frameCount - 1, totalFrames: self.frameCount)
             }
         } else {
             return nil
@@ -744,18 +746,21 @@ public final class AnimatedStickerNode: ASDisplayNode {
     private var reportedStarted = false
     
     public var completed: (Bool) -> Void = { _ in }
+    public var frameUpdated: (Int, Int) -> Void = { _, _ in }
     
     private let timer = Atomic<SwiftSignalKit.Timer?>(value: nil)
-    private let frameSource = Atomic<QueueLocalObject<AnimatedStickerFrameSourceWrapper>?>(value: nil)
+    public let frameSource = Atomic<QueueLocalObject<AnimatedStickerFrameSourceWrapper>?>(value: nil)
     
     private var directData: (Data, String, Int, Int, String?, EmojiFitzModifier?)?
     private var cachedData: (Data, Bool, EmojiFitzModifier?)?
     
-    private var renderer: (AnimationRenderer & ASDisplayNode)?
+    public var renderer: (AnimationRenderer & ASDisplayNode)?
     
     public var isPlaying: Bool = false
     private var canDisplayFirstFrame: Bool = false
     private var playbackMode: AnimatedStickerPlaybackMode = .loop
+    
+    public var stopAtNearestLoop: Bool = false
     
     private let playbackStatus = Promise<AnimatedStickerStatus>()
     public var status: Signal<AnimatedStickerStatus, NoError> {
@@ -964,9 +969,17 @@ public final class AnimatedStickerNode: ASDisplayNode {
                                 }
                             })
                             
+                            strongSelf.frameUpdated(frame.index, frame.totalFrames)
+                            
                             if frame.isLastFrame {
                                 var stopped = false
+                                var stopNow = false
                                 if case .once = strongSelf.playbackMode {
+                                    stopNow = true
+                                } else if strongSelf.stopAtNearestLoop {
+                                    stopNow = true
+                                }
+                                if stopNow {
                                     strongSelf.stop()
                                     strongSelf.isPlaying = false
                                     stopped = true
@@ -1041,9 +1054,17 @@ public final class AnimatedStickerNode: ASDisplayNode {
                                 }
                             })
                             
+                            strongSelf.frameUpdated(frame.index, frame.totalFrames)
+                            
                             if frame.isLastFrame {
                                 var stopped = false
+                                var stopNow = false
                                 if case .once = strongSelf.playbackMode {
+                                    stopNow = true
+                                } else if strongSelf.stopAtNearestLoop {
+                                    stopNow = true
+                                }
+                                if stopNow {
                                     strongSelf.stop()
                                     strongSelf.isPlaying = false
                                     stopped = true

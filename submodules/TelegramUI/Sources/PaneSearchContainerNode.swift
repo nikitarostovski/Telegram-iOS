@@ -147,7 +147,7 @@ final class PaneSearchContainerNode: ASDisplayNode {
         }
         
         switch transition {
-            case let .animated(duration, curve):
+            case let .animated(_, duration, curve):
                 self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration / 2.0)
                 if let placeholder = placeholder {
                     self.searchBar.animateIn(from: placeholder, duration: duration, timingFunction: curve.timingFunction, completion: completion)
@@ -165,7 +165,7 @@ final class PaneSearchContainerNode: ASDisplayNode {
     }
     
     func animateOut(to placeholder: PaneSearchBarPlaceholderNode, animateOutSearchBar: Bool, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
-        if case let .animated(duration, curve) = transition {
+        if case let .animated(_, duration, curve) = transition {
             if let size = self.validLayout {
                 let placeholderFrame = placeholder.view.convert(placeholder.bounds, to: self.view)
                 let verticalOrigin = placeholderFrame.minY - 4.0

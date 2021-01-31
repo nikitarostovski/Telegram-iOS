@@ -182,14 +182,16 @@ public final class ListViewAnimation {
     }
 }
 
-public func listViewAnimationDurationAndCurve(transition: ContainedViewLayoutTransition) -> (Double, ListViewAnimationCurve) {
+public func listViewAnimationDurationAndCurve(transition: ContainedViewLayoutTransition) -> (Double, Double, ListViewAnimationCurve) {
     var duration: Double = 0.0
+    var delay: Double = 0.0
     var curve: UInt = 0
     switch transition {
         case .immediate:
             break
-        case let .animated(animationDuration, animationCurve):
+        case let .animated(animationDelay, animationDuration, animationCurve):
             duration = animationDuration
+            delay = animationDelay
             switch animationCurve {
                 case .linear, .easeInOut, .custom:
                     break
@@ -205,5 +207,5 @@ public func listViewAnimationDurationAndCurve(transition: ContainedViewLayoutTra
         listViewCurve = .Default(duration: duration)
     }
     
-    return (duration, listViewCurve)
+    return (delay, duration, listViewCurve)
 }

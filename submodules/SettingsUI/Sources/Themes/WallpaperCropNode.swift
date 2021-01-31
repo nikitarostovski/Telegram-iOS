@@ -100,7 +100,7 @@ final class WallpaperCropNode: ASDisplayNode, UIScrollViewDelegate {
                 switch transition {
                     case .immediate:
                         break
-                    case let .animated(duration, curve):
+                    case let .animated(_, duration, curve):
                         let t = contentNode.layer.transform
                         let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
                         

@@ -134,6 +134,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         }, performTextSelectionAction: { _, _, _ in
         }, updateMessageLike: { _, _ in
         }, openMessageReactions: { _ in
+        }, displayImportedMessageTooltip: { _ in
         }, displaySwipeToReplyHint: {
         }, dismissReplyMarkupMessage: { _ in
         }, openMessagePollResults: { _, _ in
@@ -1049,7 +1050,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.topSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset + topPanelHeight), size: CGSize(width: width, height: separatorHeight)))
         transition.updateFrame(node: self.bottomSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: maximumHeight + contentVerticalOffset - bottomPanelHeight - bottomInset), size: CGSize(width: width, height: separatorHeight)))
         
-        let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
+        let (_, duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         
         let listPosition = CGPoint(x: width / 2.0, y: (bottomPanelHeight - collectionListPanelOffset) / 2.0)
         self.stickerListView.bounds = CGRect(x: 0.0, y: 0.0, width: bottomPanelHeight, height: width)

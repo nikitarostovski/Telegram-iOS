@@ -7,7 +7,7 @@ public enum AnimationRendererFrameType {
     case yuva
 }
 
-protocol AnimationRenderer {
+public protocol AnimationRenderer {
     func render(queue: Queue, width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType, completion: @escaping () -> Void)
     
     func setOverlayColor(_ color: UIColor?, animated: Bool)

@@ -235,6 +235,16 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             switch entry {
                 case let .wallpaper(wallpaper, message):
                     switch wallpaper {
+                        case let .animatedGradient(c1, c2, c3, c4, settings):
+                            displaySize = CGSize(width: 1.0, height: 1.0)
+                            contentSize = displaySize
+                            signal = gradientImage([UIColor(rgb: c1), UIColor(rgb: c2)], rotation: settings.rotation)
+                            fetchSignal = .complete()
+                            statusSignal = .single(.Local)
+                            subtitleSignal = .single(nil)
+                            actionSignal = .single(defaultAction)
+                            colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
+                            isBlurrable = false
                         case .builtin:
                             displaySize = CGSize(width: 1308.0, height: 2688.0).fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                             contentSize = displaySize
@@ -501,12 +511,12 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     switch status {
                         case let .Fetching(_, progress):
                             let adjustedProgress = max(progress, 0.027)
-                            state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: false)
+                            state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: false, animateRotation: true)
                         case .Local:
                             state = .none
                             local = true
                         case .Remote:
-                            state = .progress(color: statusForegroundColor, lineWidth: nil, value: 0.027, cancelEnabled: false)
+                            state = .progress(color: statusForegroundColor, lineWidth: nil, value: 0.027, cancelEnabled: false, animateRotation: true)
                     }
                     strongSelf.statusNode.transitionToState(state, completion: {})
                     
@@ -747,6 +757,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     motionFrame = rightButtonFrame
                 case let .wallpaper(wallpaper, _):
                     switch wallpaper {
+                        case .animatedGradient:
+                            motionAlpha = 1.0
                         case .builtin:
                             motionAlpha = 1.0
                         case .color:

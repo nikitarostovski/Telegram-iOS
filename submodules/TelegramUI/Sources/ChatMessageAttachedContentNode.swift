@@ -217,22 +217,22 @@ final class ChatMessageAttachedContentButtonNode: HighlightTrackingButtonNode {
 }
 
 final class ChatMessageAttachedContentNode: ASDisplayNode {
-    private let lineNode: ASImageNode
-    private let textNode: TextNode
-    private let inlineImageNode: TransformImageNode
-    private var contentImageNode: ChatMessageInteractiveMediaNode?
-    private var contentInstantVideoNode: ChatMessageInteractiveInstantVideoNode?
-    private var contentFileNode: ChatMessageInteractiveFileNode?
-    private var buttonNode: ChatMessageAttachedContentButtonNode?
+    let lineNode: ASImageNode
+    let textNode: TextNode
+    let inlineImageNode: TransformImageNode
+    var contentImageNode: ChatMessageInteractiveMediaNode?
+    var contentInstantVideoNode: ChatMessageInteractiveInstantVideoNode?
+    var contentFileNode: ChatMessageInteractiveFileNode?
+    var buttonNode: ChatMessageAttachedContentButtonNode?
     
-    private let statusNode: ChatMessageDateAndStatusNode
-    private var additionalImageBadgeNode: ChatMessageInteractiveMediaBadge?
-    private var linkHighlightingNode: LinkHighlightingNode?
+    let statusNode: ChatMessageDateAndStatusNode
+    var additionalImageBadgeNode: ChatMessageInteractiveMediaBadge?
+    var linkHighlightingNode: LinkHighlightingNode?
     
-    private var context: AccountContext?
-    private var message: Message?
-    private var media: Media?
-    private var theme: ChatPresentationThemeData?
+    var context: AccountContext?
+    var message: Message?
+    var media: Media?
+    var theme: ChatPresentationThemeData?
     
     var openMedia: ((InteractiveMediaNodeActivateContent) -> Void)?
     var activateAction: (() -> Void)?

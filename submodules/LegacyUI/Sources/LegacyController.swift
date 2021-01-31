@@ -481,8 +481,10 @@ open class LegacyController: ViewController, PresentableController {
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
         if let legacyTelegramController = self.legacyController as? TGViewController {
             var duration: TimeInterval = 0.0
-            if case let .animated(transitionDuration, _) = transition {
+            var delay: TimeInterval = 0.0
+            if case let .animated(transitionDelay, transitionDuration, _) = transition {
                 duration = transitionDuration
+                delay = transitionDelay
             }
             
             var orientation = UIInterfaceOrientation.portrait

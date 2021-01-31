@@ -452,7 +452,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     
                     strongSelf.appliedItem = item
                     strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
-                    
+                
                     let transition: ContainedViewLayoutTransition
                     if animation.isAnimated {
                         transition = .animated(duration: 0.2, curve: .spring)
@@ -886,7 +886,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             if let selectionNode = self.selectionNode {
                 let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentBounds.size.width, height: self.contentBounds.size.height))
                 selectionNode.frame = selectionFrame
-                selectionNode.updateLayout(size: selectionFrame.size)
+                selectionNode.updateLayout(size: selectionFrame.size, leftInset: self.safeInsets.left)
                 selectionNode.updateSelected(selected, animated: animated)
                 self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
             } else {
@@ -897,7 +897,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 })
                 let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentBounds.size.width, height: self.contentBounds.size.height))
                 selectionNode.frame = selectionFrame
-                selectionNode.updateLayout(size: selectionFrame.size)
+                selectionNode.updateLayout(size: selectionFrame.size, leftInset: self.safeInsets.left)
                 self.addSubnode(selectionNode)
                 self.selectionNode = selectionNode
                 selectionNode.updateSelected(selected, animated: false)
@@ -935,9 +935,128 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+        if AnimationManager.shared.shouldAnimateInsertion { return }
         super.animateInsertion(currentTimestamp, duration: duration, short: short)
         
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+    }
+    
+    override func animateCustomInsertion() {
+        guard let settings = AnimationManager.shared.settings.data[.video] as? VideoMessageSettings else { return }
+        guard let videoFrame = AnimationManager.shared.videoFrame else { return }
+        
+        var frame = videoFrame
+        
+        var toFrame = AnimationManager.shared.calcGlobalFrame(for: self, ignoreDiff: true)
+        toFrame.origin.x += interactiveVideoNode.frame.minX
+        toFrame.origin.y += interactiveVideoNode.frame.minY
+        
+//        interactiveVideoNode.backgroundColor = UIColor.cyan.withAlphaComponent(0.5)
+        
+        let nodeFrame = interactiveVideoNode.frame
+        AnimationManager.shared.animate(interactiveVideoNode, from: frame, to: toFrame, removeOnCompletion: false, curveX: settings.curveX, curveY: settings.curveY, curveScale: settings.curveScale, completion: { [weak self] in
+            
+            self?.interactiveVideoNode.pop_removeAllAnimations()
+            self?.interactiveVideoNode.layer.removeAllAnimations()
+            self?.interactiveVideoNode.frame = nodeFrame
+        })
+        
+        //
+        
+        // background
+        if let backNode = self.replyBackgroundNode, let panelNode = AnimationManager.shared.accessoryNode as? ReplyAccessoryPanelNode {
+            
+            var toFrameR = backNode.frame
+            toFrameR.origin.y += toFrame.minY
+            
+            var frame = panelNode.layer.presentFrame
+            frame.origin.x = backNode.frame.origin.x
+            frame.size.width = backNode.frame.width
+            
+            let replyFrame = backNode.frame
+            AnimationManager.shared.animate(backNode, from: frame, to: toFrameR, removeOnCompletion: false, curveX: settings.curveX, curveY: settings.curveY, completion: { [weak self] in
+                
+                self?.replyBackgroundNode?.pop_removeAllAnimations()
+                self?.replyBackgroundNode?.layer.removeAllAnimations()
+                self?.replyBackgroundNode?.frame = replyFrame
+            })
+            
+            AnimationManager.shared.animate(backNode, fromAlpha: 0, toAlpha: 1, curve: settings.curveScale)
+        }
+        
+        if let replyInfoNode = replyInfoNode, let panelNode = AnimationManager.shared.accessoryNode as? ReplyAccessoryPanelNode {
+            
+            panelNode.isHidden = true
+            
+            
+            // node
+            let frame = panelNode.layer.presentFrame
+            var toFrameR = replyInfoNode.frame
+            toFrameR.origin.y += toFrame.minY
+            
+            let replyFrame = replyInfoNode.frame
+            AnimationManager.shared.animate(replyInfoNode, from: frame, to: toFrameR, removeOnCompletion: false, curveX: settings.curveX, curveY: settings.curveY, completion: { [weak self] in
+                
+                self?.replyInfoNode?.pop_removeAllAnimations()
+                self?.replyInfoNode?.layer.removeAllAnimations()
+                self?.replyInfoNode?.frame = replyFrame
+            })
+
+            // line
+            let lineFromFrame = panelNode.lineNode.layer.presentFrame
+            let lineToFrameR = replyInfoNode.lineNode.frame
+            
+            let lineFrame = replyInfoNode.lineNode.frame
+            AnimationManager.shared.animate(replyInfoNode.lineNode, from: lineFromFrame, to: lineToFrameR, removeOnCompletion: false, curveX: settings.curveX, curveY: settings.curveY, completion: { [weak self] in
+                
+                self?.replyInfoNode?.lineNode.pop_removeAllAnimations()
+                self?.replyInfoNode?.lineNode.layer.removeAllAnimations()
+                self?.replyInfoNode?.lineNode.frame = lineFrame
+            })
+//            AnimationManager.shared.animate(replyInfoNode.lineNode, fromColor: panelNode.lineNode.tintColor)
+
+            // text
+            if let textNode = replyInfoNode.textNode {
+                let textFromFrame = panelNode.textNode.layer.presentFrame
+                let textToFrameR = textNode.frame
+                
+                let textFrame = textNode.frame
+                AnimationManager.shared.animate(textNode, from: textFromFrame, to: textToFrameR, removeOnCompletion: false, curveX: settings.curveX, curveY: settings.curveY, completion: { [weak self] in
+                    
+                    self?.replyInfoNode?.textNode?.pop_removeAllAnimations()
+                    self?.replyInfoNode?.textNode?.layer.removeAllAnimations()
+                    self?.replyInfoNode?.textNode?.frame = textFrame
+                })
+            }
+
+            // title
+            if let titleNode = replyInfoNode.titleNode {
+                let titleFromFrame = panelNode.titleNode.layer.presentFrame
+                let titleToFrameR = titleNode.frame
+                
+                let titleFrame = titleNode.frame
+                AnimationManager.shared.animate(titleNode, from: titleFromFrame, to: titleToFrameR, removeOnCompletion: false, curveX: settings.curveX, curveY: settings.curveY, completion: { [weak self] in
+                    
+                    self?.replyInfoNode?.titleNode?.pop_removeAllAnimations()
+                    self?.replyInfoNode?.titleNode?.layer.removeAllAnimations()
+                    self?.replyInfoNode?.titleNode?.frame = titleFrame
+                })
+            }
+            // image
+            
+            if let imageNode = replyInfoNode.imageNode {
+                let imageFromFrame = panelNode.imageNode.layer.presentFrame
+                let imageToFrameR = imageNode.frame
+                
+                let imageFrame = imageNode.frame
+                AnimationManager.shared.animate(imageNode, from: imageFromFrame, to: imageToFrameR, removeOnCompletion: false, curveX: settings.curveX, curveY: settings.curveY, completion: { [weak self] in
+                    
+                    self?.replyInfoNode?.imageNode?.pop_removeAllAnimations()
+                    self?.replyInfoNode?.imageNode?.layer.removeAllAnimations()
+                    self?.replyInfoNode?.imageNode?.frame = imageFrame
+                })
+            }
+        }
     }
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
@@ -947,6 +1066,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     }
     
     override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+        if AnimationManager.shared.shouldAnimateInsertion { return }
         super.animateAdded(currentTimestamp, duration: duration)
         
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)

@@ -146,6 +146,7 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     }
     
     func animateInsertion(_ currentTimestamp: Double, duration: Double) {
+//        super.animateInsertion(currentTimestamp, duration: duration)
     }
     
     func animateAdded(_ currentTimestamp: Double, duration: Double) {
@@ -203,6 +204,10 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     }
     
     func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+        return nil
+    }
+    
+    func getStatusNode() -> ASDisplayNode? {
         return nil
     }
 }

@@ -311,7 +311,7 @@ private final class OldChannelsSearchContainerNode: SearchDisplayControllerConte
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
                 
-        let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
+        let (_, duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight

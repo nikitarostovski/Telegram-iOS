@@ -56,10 +56,16 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
         var isFile = false
         inner: for media in message.media {
             if let _ = media as? TelegramMediaImage {
+                if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), message.text.isEmpty {
+                    messageWithCaptionToAdd = (message, itemAttributes)
+                }
                 result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
             } else if let file = media as? TelegramMediaFile {
                 let isVideo = file.isVideo || (file.isAnimated && file.dimensions != nil)
                 if isVideo {
+                    if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), message.text.isEmpty {
+                        messageWithCaptionToAdd = (message, itemAttributes)
+                    }
                     result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
                 } else {
                     var neighborSpacing: ChatMessageBubbleRelativePosition.NeighbourSpacing = .default
@@ -541,37 +547,113 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         super.animateInsertion(currentTimestamp, duration: duration, short: short)
+    }
+    
+    override func animateCustomInsertion() {
+        guard let controllerNode = AnimationManager.shared.controllerNode else { return }
+        guard let smallSettings = AnimationManager.shared.settings.data[.smallMessage] as? SmallMessageSettings else { return }
+        guard let audioSettings = AnimationManager.shared.settings.data[.voice] as? VoiceMessageSettings else { return }
+        guard let linkSettings = AnimationManager.shared.settings.data[.linkPreview] as? LinkWithPreviewSettings else { return }
         
-        self.shadowNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        var curveX = smallSettings.curveX
+        var curveY = smallSettings.curveY
+        var curveStatus = smallSettings.curveBubble
+        var curveReply = smallSettings.curveStatus
         
-        func process(node: ASDisplayNode) {
-            if node === self.accessoryItemNode {
-                return
-            }
-            
-            if node !== self {
-                switch node {
-                case _ as ContextExtractedContentContainingNode, _ as ContextControllerSourceNode, _ as ContextExtractedContentNode:
-                    break
-                default:
-                    node.layer.allowsGroupOpacity = true
-                    node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak node] _ in
-                        node?.layer.allowsGroupOpacity = false
-                    })
-                    return
-                }
-            }
-            
-            guard let subnodes = node.subnodes else {
-                return
-            }
-            
-            for subnode in subnodes {
-                process(node: subnode)
-            }
+        if AnimationManager.shared.messageType == .audio {
+            curveX = audioSettings.curveX
+            curveY = audioSettings.curveY
+            curveStatus = audioSettings.curveStatus
+            curveReply = audioSettings.curveStatus
+        } else if AnimationManager.shared.messageType == .link {
+            curveX = linkSettings.curveX
+            curveY = linkSettings.curveY
+            curveStatus = linkSettings.curveStatus
+            curveReply = linkSettings.curveStatus
         }
         
-        process(node: self)
+        
+        // bubble
+        let inputContainer = controllerNode.textInputPanelNode?.textInputContainer
+        
+        var bx = inputContainer?.frame.minX ?? 0
+        var by = (inputContainer?.frame.minY ?? 0) + (controllerNode.accessoryCur?.frame.height ?? 0)
+        var bw = inputContainer?.frame.width ?? 0
+        var bh = inputContainer?.layer.presentFrame.height ?? 0
+        
+        if AnimationManager.shared.messageType == .audio {
+            bx = backgroundNode.frame.origin.x
+            bw = backgroundNode.frame.width
+        }
+        
+        let bubbleFrame = CGRect(x: bx, y: by, width: bw, height: bh)
+        let bubbleImageStartFrame = CGRect(x: 0, y: 0, width: bubbleFrame.width, height: bubbleFrame.height)
+        
+        
+        AnimationManager.shared.animate(backgroundNode, from: bubbleFrame, curveX: curveX, curveY: curveY, completion: { [weak self] in
+//            self?.layer.removeAllAnimations()
+//            self?.removeAllAnimations()
+        })
+        AnimationManager.shared.animate(backgroundNode.imageNode, from: bubbleImageStartFrame, curveX: curveX, curveY: curveY)
+        AnimationManager.shared.animate(backgroundNode.outlineImageNode, from: bubbleImageStartFrame, curveX: curveX, curveY: curveY)
+        AnimationManager.shared.animate(backgroundNode, fromAlpha: 0, toAlpha: 1, curve: curveStatus)
+        
+        
+        // accessory
+        if let replyInfoNode = replyInfoNode, let panelNode = AnimationManager.shared.accessoryNode as? ReplyAccessoryPanelNode {
+            
+            panelNode.isHidden = true
+            
+            // node
+            let frame = CGRect(x: 0, y: 0, width: panelNode.frame.width, height: panelNode.frame.height)
+            AnimationManager.shared.animate(replyInfoNode, from: frame, curveX: curveReply, curveY: curveReply, completion: { [weak self] in
+//                self?.layer.removeAllAnimations()
+//                self?.removeAllAnimations()
+            })
+            
+            // line
+            let lineFrame = panelNode.lineNode.layer.presentFrame
+            AnimationManager.shared.animate(replyInfoNode.lineNode, from: lineFrame, curveX: curveReply, curveY: curveReply)
+//            AnimationManager.shared.animate(replyInfoNode.lineNode, fromColor: panelNode.lineNode.tintColor)
+            
+            // text
+            if let textNode = replyInfoNode.textNode {
+                var titleFrame = panelNode.textNode.frame
+                titleFrame.size.height = textNode.frame.height
+                titleFrame.size.width = textNode.frame.width
+                
+                titleFrame.origin.y += (panelNode.textNode.frame.height - textNode.frame.height) / 2
+                AnimationManager.shared.animate(textNode, from: titleFrame, curveX: curveReply, curveY: curveReply)
+//                AnimationManager.shared.animate(textNode, fromColor: panelNode.textNode.tintColor)
+            }
+            
+            // title
+            if let titleNode = replyInfoNode.titleNode {
+                var titleFrame = panelNode.titleNode.frame
+                titleFrame.size.height = titleNode.frame.height
+                titleFrame.size.width = titleNode.frame.width
+                
+                titleFrame.origin.y += (panelNode.titleNode.frame.height - titleNode.frame.height) / 2
+                AnimationManager.shared.animate(titleNode, from: titleFrame, curveX: curveReply, curveY: curveReply)
+//                AnimationManager.shared.animate(titleNode, fromColor: panelNode.titleNode.tintColor)
+            }
+            
+            // image
+            if let imageNode = replyInfoNode.imageNode {
+                let imageFrame = panelNode.imageNode.frame
+                AnimationManager.shared.animate(imageNode, from: imageFrame, curveX: curveReply, curveY: curveReply)
+            }
+        }
+    
+        // subnodes
+        self.contentNodes.forEach { node in
+            var b = bounds
+            if AnimationManager.shared.messageType == .audio {
+                b = CGRect(x: node.frame.origin.x, y: node.frame.origin.y, width: bw, height: bh)
+            }
+            AnimationManager.shared.animate(node, from: b, curveX: curveX, curveY: curveY)
+            node.animateCustomInsertion()
+        }
     }
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
@@ -1036,6 +1118,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
                 effectiveAuthor = source
                 displayAuthorInfo = !mergedTop.merged && incoming && effectiveAuthor != nil
+            } else if let forwardInfo = item.content.firstMessage.forwardInfo, forwardInfo.flags.contains(.isImported), let author = forwardInfo.author {
+                ignoreForward = true
+                effectiveAuthor = author
+                displayAuthorInfo = !mergedTop.merged && incoming
+            } else if let forwardInfo = item.content.firstMessage.forwardInfo, forwardInfo.flags.contains(.isImported), let authorSignature = forwardInfo.authorSignature {
+                ignoreForward = true
+                effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: Int32(clamping: authorSignature.persistentHashValue)), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: UserInfoFlags())
+                displayAuthorInfo = !mergedTop.merged && incoming
             } else {
                 effectiveAuthor = firstMessage.author
                 
@@ -1426,9 +1516,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 
                 var isScam = effectiveAuthor.isScam
                 if case let .peer(peerId) = item.chatLocation, let authorPeerId = item.message.author?.id, authorPeerId == peerId {
-                    isScam = false
+                    
+                } else if effectiveAuthor.isScam {
+                    currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme.theme, type: incoming ? .regular : .outgoing)
+                } else if effectiveAuthor.isFake {
+                    currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme.theme, type: incoming ? .regular : .outgoing)
                 }
-                currentCredibilityIconImage = isScam ? PresentationResourcesChatList.scamIcon(item.presentationData.theme.theme, type: incoming ? .regular : .outgoing) : nil
+                
             }
             if let rawAuthorNameColor = authorNameColor {
                 var dimColors = false
@@ -2636,7 +2730,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         let offset: CGFloat = params.leftInset + (incoming ? 42.0 : 0.0)
         let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: params.width, height: layout.contentSize.height))
         strongSelf.selectionNode?.frame = selectionFrame
-        strongSelf.selectionNode?.updateLayout(size: selectionFrame.size)
+        strongSelf.selectionNode?.updateLayout(size: selectionFrame.size, leftInset: params.leftInset)
         
         if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
             var animated = false
@@ -2950,6 +3044,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                             
                             if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
                                 item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
+                            } else if let forwardInfo = item.content.firstMessage.forwardInfo, forwardInfo.flags.contains(.isImported), forwardInfo.author == nil {
+                                item.controllerInteraction.displayImportedMessageTooltip(avatarNode)
                             } else {
                                 if item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId), let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
                                     if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
@@ -3446,7 +3542,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 selectionNode.updateSelected(selected, animated: animated)
                 let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentSize.width, height: self.contentSize.height))
                 selectionNode.frame = selectionFrame
-                selectionNode.updateLayout(size: selectionFrame.size)
+                selectionNode.updateLayout(size: selectionFrame.size, leftInset: self.safeInsets.left)
                 self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
             } else {
                 let selectionNode = ChatMessageSelectionNode(wallpaper: item.presentationData.theme.wallpaper, theme: item.presentationData.theme.theme, toggle: { [weak self] value in
@@ -3462,7 +3558,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 
                 let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentSize.width, height: self.contentSize.height))
                 selectionNode.frame = selectionFrame
-                selectionNode.updateLayout(size: selectionFrame.size)
+                selectionNode.updateLayout(size: selectionFrame.size, leftInset: self.safeInsets.left)
                 self.insertSubnode(selectionNode, belowSubnode: self.messageAccessibilityArea)
                 self.selectionNode = selectionNode
                 selectionNode.updateSelected(selected, animated: false)
@@ -3763,5 +3859,17 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         if let forwardInfoNode = self.forwardInfoNode {
             forwardInfoNode.updatePsaButtonDisplay(isVisible: item.controllerInteraction.currentPsaMessageWithTooltip != item.message.id, animated: animated)
         }
+    }
+    
+    override func getStatusNode() -> ASDisplayNode? {
+        for contentNode in self.contentNodes {
+            if let statusNode = contentNode.getStatusNode() {
+                return statusNode
+            }
+        }
+        if let statusNode = self.mosaicStatusNode {
+            return statusNode
+        }
+        return nil
     }
 }

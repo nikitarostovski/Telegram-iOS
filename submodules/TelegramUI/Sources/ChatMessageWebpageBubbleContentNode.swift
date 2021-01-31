@@ -36,7 +36,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         self.contentNode.openMedia = { [weak self] mode in
             if let strongSelf = self, let item = strongSelf.item {
                 if let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
-                    if let image = content.image, let instantPage = content.instantPage {
+                    if let _ = content.image, let _ = content.instantPage {
                         if instantPageType(of: content) != .album {
                             item.controllerInteraction.openInstantPage(item.message, item.associatedData)
                             return
@@ -333,6 +333,65 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func animateInsertionIntoBubble(_ duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+    }
+    
+    override func animateCustomInsertion() {
+        guard let panelNode = AnimationManager.shared.accessoryNode as? WebpagePreviewAccessoryPanelNode else { return }
+        guard let settings = AnimationManager.shared.settings.data[.linkPreview] as? LinkWithPreviewSettings else { return }
+        panelNode.isHidden = true
+            
+        // node
+        let frame = CGRect(x: 0, y: 0, width: panelNode.frame.width, height: panelNode.frame.height)
+        AnimationManager.shared.animate(contentNode, from: frame, curveX: settings.curveX, curveY: settings.curveY)
+
+        // line
+//        let lineFrame = panelNode.lineNode.layer.presentFrame
+//
+//        AnimationManager.shared.animate(contentNode.lineNode, from: lineFrame)
+//        AnimationManager.shared.animate(contentNode.lineNode, fromColor: panelNode.lineNode.tintColor)
+
+//        contentNode.statusNode.backgroundColor = UIColor.red.withAlphaComponent(0.5)
+        
+        
+        let lineFrame = CGRect(x: panelNode.lineNode.layer.presentFrame.minX,
+                               y: 0,
+                               width: panelNode.lineNode.layer.presentFrame.width, height: panelNode.lineNode.layer.presentFrame.height)
+        AnimationManager.shared.animate(contentNode.lineNode, from: lineFrame, curveX: settings.curveX, curveY: settings.curveY)
+        
+        let contentNodeFrame = CGRect(x: panelNode.textNode.layer.presentFrame.minX,
+                                      y: 0,
+                                      width: panelNode.frame.width, height: panelNode.frame.height)
+        AnimationManager.shared.animate(contentNode.textNode, from: contentNodeFrame, curveX: settings.curveX, curveY: settings.curveY)
+        
+        
+//            // text
+//            if let textNode = replyInfoNode.textNode {
+//                var titleFrame = panelNode.textNode.frame
+//                titleFrame.size.height = textNode.frame.height
+//                titleFrame.size.width = textNode.frame.width
+//
+//                titleFrame.origin.y += (panelNode.textNode.frame.height - textNode.frame.height) / 2
+//                AnimationManager.shared.animate(textNode, from: titleFrame)
+//                AnimationManager.shared.animate(textNode, fromColor: panelNode.textNode.tintColor)
+//            }
+//
+//            // title
+//            if let titleNode = replyInfoNode.titleNode {
+//                var titleFrame = panelNode.titleNode.frame
+//                titleFrame.size.height = titleNode.frame.height
+//                titleFrame.size.width = titleNode.frame.width
+//
+//                titleFrame.origin.y += (panelNode.titleNode.frame.height - titleNode.frame.height) / 2
+//                AnimationManager.shared.animate(titleNode, from: titleFrame)
+//                AnimationManager.shared.animate(titleNode, fromColor: panelNode.titleNode.tintColor)
+//            }
+//
+//            // image
+//            if let imageNode = replyInfoNode.imageNode {
+//                let imageFrame = panelNode.imageNode.frame
+//                AnimationManager.shared.animate(imageNode, from: imageFrame)
+//            }
+//        }
     }
     
     override func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {

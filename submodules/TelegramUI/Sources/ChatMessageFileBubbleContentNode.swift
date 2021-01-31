@@ -51,6 +51,12 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 let _ = item.controllerInteraction.requestMessageUpdate(item.message.id)
             }
         }
+        
+        self.interactiveFileNode.displayImportedTooltip = { [weak self] sourceNode in
+            if let strongSelf = self, let item = strongSelf.item {
+                let _ = item.controllerInteraction.displayImportedMessageTooltip(sourceNode)
+            }
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -139,6 +145,13 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
         self.interactiveFileNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+    }
+    
+    override func animateCustomInsertion() {
+        guard let controllerNode = AnimationManager.shared.controllerNode else { return }
+        guard let settings = AnimationManager.shared.settings.data[.voice] as? VoiceMessageSettings else { return }
+        
+        AnimationManager.shared.animate(self.interactiveFileNode, fromAlpha: 0, toAlpha: 1, curve: settings.curveStatus)
     }
     
     override func animateAdded(_ currentTimestamp: Double, duration: Double) {

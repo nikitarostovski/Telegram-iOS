@@ -33,6 +33,12 @@ public func chatControllerBackgroundImage(theme: PresentationTheme?, wallpaper i
     } else {
         var succeed = true
         switch wallpaper {
+            case let .animatedGradient(color1, color2, color3, color4, settings):
+                backgroundImage = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
+                    context.setFillColor(UIColor.systemPink.withAlphaComponent(1.0).cgColor)
+                    context.fill(CGRect(origin: CGPoint(), size: size))
+                })
+                break
             case .builtin:
                 if let filePath = getAppBundle().path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg") {
                     backgroundImage = UIImage(contentsOfFile: filePath)?.precomposed()
@@ -104,12 +110,15 @@ public func chatControllerBackgroundImage(theme: PresentationTheme?, wallpaper i
     return backgroundImage
 }
 
+public typealias AnimatedBackgroundColors = (UInt32, UInt32, UInt32, UInt32)
+
 private var signalBackgroundImageForWallpaper: (TelegramWallpaper, Bool, UIImage)?
 
-public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, mediaBox: MediaBox, accountMediaBox: MediaBox) -> Signal<(UIImage?, Bool)?, NoError> {
+public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, mediaBox: MediaBox, accountMediaBox: MediaBox) -> Signal<(UIImage?, AnimatedBackgroundColors?, Bool)?, NoError> {
+    
     var backgroundImage: UIImage?
     if wallpaper == signalBackgroundImageForWallpaper?.0, (wallpaper.settings?.blur ?? false) == signalBackgroundImageForWallpaper?.1, let image = signalBackgroundImageForWallpaper?.2 {
-        return .single((image, true))
+        return .single((image, nil, true))
     } else {
         func cacheWallpaper(_ image: UIImage?) {
             if let image = image {
@@ -120,9 +129,14 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
         }
         
         switch wallpaper {
+            case let .animatedGradient(color1, color2, color3, color4, settings):
+                return .single((nil, (color1, color2, color3, color4), true))
+                |> afterNext { image in
+                    cacheWallpaper(image?.0)
+                }
             case .builtin:
                 if let filePath = getAppBundle().path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg") {
-                    return .single((UIImage(contentsOfFile: filePath)?.precomposed(), true))
+                    return .single((UIImage(contentsOfFile: filePath)?.precomposed(), nil, true))
                     |> afterNext { image in
                         cacheWallpaper(image?.0)
                     }
@@ -131,7 +145,7 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                 return .single((generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
                     context.setFillColor(UIColor(argb: color).withAlphaComponent(1.0).cgColor)
                     context.fill(CGRect(origin: CGPoint(), size: size))
-                }), true))
+                }), nil, true))
                 |> afterNext { image in
                     cacheWallpaper(image?.0)
                 }
@@ -148,7 +162,7 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                     context.translateBy(x: -320.0, y: -640.0)
                     
                     context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-                }), true))
+                }), nil, true))
                 |> afterNext { image in
                     cacheWallpaper(image?.0)
                 }
@@ -156,9 +170,9 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                 if let largest = largestImageRepresentation(representations) {
                     if settings.blur {
                         return mediaBox.cachedResourceRepresentation(largest.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true)
-                        |> map { data -> (UIImage?, Bool)? in
+                        |> map { data -> (UIImage?, (UInt32, UInt32, UInt32, UInt32)?, Bool)? in
                             if data.complete {
-                                return (UIImage(contentsOfFile: data.path)?.precomposed(), true)
+                                return (UIImage(contentsOfFile: data.path)?.precomposed(), nil, true)
                             } else {
                                 return nil
                             }
@@ -167,7 +181,7 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                             cacheWallpaper(image?.0)
                         }
                     } else if let path = mediaBox.completedResourcePath(largest.resource) {
-                        return .single((UIImage(contentsOfFile: path)?.precomposed(), true))
+                        return .single((UIImage(contentsOfFile: path)?.precomposed(), nil, true))
                         |> afterNext { image in
                             cacheWallpaper(image?.0)
                         }
@@ -186,9 +200,9 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                     
                     return effectiveMediaBox.cachedResourceRepresentation(file.file.resource, representation: representation, complete: true, fetch: true, attemptSynchronously: true)
                     |> take(1)
-                    |> mapToSignal { data -> Signal<(UIImage?, Bool)?, NoError> in
+                    |> mapToSignal { data -> Signal<(UIImage?, (UInt32, UInt32, UInt32, UInt32)?, Bool)?, NoError> in
                         if data.complete {
-                            return .single((UIImage(contentsOfFile: data.path)?.precomposed(), true))
+                            return .single((UIImage(contentsOfFile: data.path)?.precomposed(), nil, true))
                         } else {
                             let interimWallpaper: TelegramWallpaper
                             if let secondColor = file.settings.bottomColor {
@@ -214,9 +228,9 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                                 }
                             })
 
-                            return .single((interrimImage, false)) |> then(effectiveMediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, bottomColor: file.settings.bottomColor, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true, attemptSynchronously: false)
-                            |> map { data -> (UIImage?, Bool)? in
-                                return (UIImage(contentsOfFile: data.path)?.precomposed(), true)
+                            return .single((interrimImage, nil, false)) |> then(effectiveMediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, bottomColor: file.settings.bottomColor, intensity: intensity, rotation: file.settings.rotation), complete: true, fetch: true, attemptSynchronously: false)
+                            |> map { data -> (UIImage?, (UInt32, UInt32, UInt32, UInt32)?, Bool)? in
+                                return (UIImage(contentsOfFile: data.path)?.precomposed(), nil, true)
                             })
                         }
                     }
@@ -235,9 +249,9 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                         }
                         
                         return effectiveMediaBox.cachedResourceRepresentation(file.file.resource, representation: representation, complete: true, fetch: true, attemptSynchronously: true)
-                        |> map { data -> (UIImage?, Bool)? in
+                        |> map { data -> (UIImage?, (UInt32, UInt32, UInt32, UInt32)?, Bool)? in
                             if data.complete {
-                                return (UIImage(contentsOfFile: data.path)?.precomposed(), true)
+                                return (UIImage(contentsOfFile: data.path)?.precomposed(), nil, true)
                             } else {
                                 return nil
                             }
@@ -253,7 +267,7 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                             path = maybePath
                         }
                         if let path = path {
-                            return .single((UIImage(contentsOfFile: path)?.precomposed(), true))
+                            return .single((UIImage(contentsOfFile: path)?.precomposed(), nil, true))
                             |> afterNext { image in
                                 cacheWallpaper(image?.0)
                             }
